@@ -1,1 +1,252 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather App</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #1565c0, #42a5f5);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    width: 100%;
+    max-width: 380px;
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 10px 30px #0003;
+}
+
+h1 {
+    color: #1565c0;
+}
+
+input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    background: #1565c0;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.weather {
+    margin-top: 25px;
+}
+
+#icon {
+    font-size: 65px;
+}
+
+#temp {
+    font-size: 45px;
+    color: #1565c0;
+    margin: 10px;
+}
+
+.details {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+.details div {
+    background: #eaf3ff;
+    padding: 12px 5px;
+    border-radius: 10px;
+    flex: 1;
+    font-size: 13px;
+}
+
+#error {
+    color: red;
+    margin-top: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🌤 Weather App</h1>
+
+    <input
+        type="text"
+        id="city"
+        placeholder="Enter City Name"
+    >
+
+    <button onclick="getWeather()">
+        Search Weather
+    </button>
+
+    <p id="error"></p>
+
+    <div class="weather">
+
+        <h2 id="name">City Name</h2>
+
+        <div id="icon">🌤️</div>
+
+        <h1 id="temp">--°C</h1>
+
+        <p id="condition">Weather Condition</p>
+
+        <div class="details">
+
+            <div>
+                💧
+                <p>Humidity</p>
+                <b id="humidity">--%</b>
+            </div>
+
+            <div>
+                💨
+                <p>Wind</p>
+                <b id="wind">-- km/h</b>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+async function getWeather() {
+
+    const city = document
+        .getElementById("city")
+        .value.trim();
+
+    const error = document.getElementById("error");
+
+    if (!city) {
+        error.innerText = "Please enter city name!";
+        return;
+    }
+
+    error.innerText = "Loading...";
+
+    try {
+
+        // Step 1: Find city coordinates
+
+        const geoURL =
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
+
+        const geoResponse = await fetch(geoURL);
+
+        if (!geoResponse.ok) {
+            throw new Error("Location API failed");
+        }
+
+        const geoData = await geoResponse.json();
+
+        if (!geoData.results || geoData.results.length === 0) {
+            throw new Error("City not found!");
+        }
+
+        const location = geoData.results[0];
+
+        const latitude = location.latitude;
+        const longitude = location.longitude;
+
+        // Step 2: Get weather data
+
+        const weatherURL =
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m&timezone=auto`;
+
+        const weatherResponse = await fetch(weatherURL);
+
+        if (!weatherResponse.ok) {
+            throw new Error("Weather API failed");
+        }
+
+        const weatherData = await weatherResponse.json();
+
+        const current = weatherData.current;
+
+        // Step 3: Show weather data
+
+        document.getElementById("name").innerText =
+            location.name + ", " + location.country;
+
+        document.getElementById("temp").innerText =
+            current.temperature_2m + "°C";
+
+        document.getElementById("humidity").innerText =
+            current.relative_humidity_2m + "%";
+
+        document.getElementById("wind").innerText =
+            current.wind_speed_10m + " km/h";
+
+        // Step 4: Weather condition
+
+        const weatherInfo = {
+            0: ["Clear Sky", "☀️"],
+            1: ["Mainly Clear", "🌤️"],
+            2: ["Partly Cloudy", "⛅"],
+            3: ["Cloudy", "☁️"],
+            45: ["Foggy", "🌫️"],
+            48: ["Foggy", "🌫️"],
+            51: ["Drizzle", "🌦️"],
+            61: ["Rain", "🌧️"],
+            63: ["Rain", "🌧️"],
+            65: ["Heavy Rain", "🌧️"],
+            71: ["Snow", "❄️"],
+            80: ["Rain Showers", "🌦️"],
+            95: ["Thunderstorm", "⛈️"]
+        };
+
+        const info = weatherInfo[current.weather_code]
+            || ["Unknown Weather", "🌡️"];
+
+        document.getElementById("condition").innerText =
+            info[0];
+
+        document.getElementById("icon").innerText =
+            current.is_day ? info[1] : "🌙";
+
+        error.innerText = "";
+
+    } catch (err) {
+
+        error.innerText = err.message;
+
+    }
+}
+
+</script>
+
+</body>
+</html>
+
